@@ -57,6 +57,7 @@ typedef struct GLogItem_
    char *agent;
    char *date;
    char *host;
+   char *vhost;
    char *ref;
    char *req;
    char *status;

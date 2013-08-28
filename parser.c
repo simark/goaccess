@@ -21,7 +21,7 @@
 
 /*
  * "_XOPEN_SOURCE" is required for the GNU libc to export "strptime(3)"
- * correctly. 
+ * correctly.
  */
 #define _LARGEFILE_SOURCE
 #define _LARGEFILE64_SOURCE
@@ -182,6 +182,7 @@ init_log_item (GLog * logger)
    log->agent = NULL;
    log->date = NULL;
    log->host = NULL;
+   log->vhost = NULL;
    log->ref = NULL;
    log->req = NULL;
    log->status = NULL;
@@ -200,6 +201,8 @@ free_logger (GLogItem * log)
       free (log->date);
    if (log->host != NULL)
       free (log->host);
+   if (log->vhost != NULL)
+      free (log->vhost);
    if (log->ref != NULL)
       free (log->ref);
    if (log->req != NULL)
@@ -365,7 +368,7 @@ process_host_agents (char *host, char *agent)
       memcpy (tmp, ptr_value, len1);
       tmp[len1] = '|';
       /*
-       * NUL-terminated 
+       * NUL-terminated
        */
       memcpy (tmp + len1 + 1, a, len2 + 1);
    } else
@@ -687,6 +690,12 @@ parse_format (GLogItem * log, const char *fmt, const char *date_format,
              free (tkn);
              break;
              /* everything else skip it */
+          case 'v':
+             tkn = parse_string (&str, p[1]);
+             if (tkn == NULL)
+                tkn = alloc_string("???");
+             log->vhost = tkn;
+	     break;
           default:
              if ((pch = strchr (str, p[1])) != NULL)
                 str += pch - str;
@@ -746,6 +755,19 @@ process_log (GLog * logger, char *line, int test)
    if (test) {
       free_logger (log);
       return 0;
+   }
+
+   if (log->vhost != NULL) {
+      char *req = log->req;
+      char *vhost = log->vhost;
+      char *new_req;
+
+      int len = strlen(req) + strlen(vhost) + 1;
+      new_req = xmalloc(len);
+      strcpy(new_req, vhost);
+      strcpy(new_req + strlen(vhost), req);
+      log->req = new_req;
+      free(req);
    }
 
    convert_date (buf, log->date, conf.date_format, "%Y%m%d", DATE_LEN);
